@@ -1,0 +1,27 @@
+.channelconfig {
+    margin: 10px;
+}
+
+.channelconfig .label {
+    display: inline-block;
+    font-weight: bold;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.channelconfig .meta {
+    padding: 5px;
+}
+
+.channelconfig .thumbnail {
+    display: inline-block;
+    width: 100%;
+}
+
+.channelconfig .descrption {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+    padding: 10px;
+}
+  

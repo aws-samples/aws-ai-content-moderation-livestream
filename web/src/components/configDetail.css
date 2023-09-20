@@ -1,0 +1,111 @@
+.config {
+    margin: 10px;
+}
+
+.config .alert {
+    padding: 10px;
+}
+.config .label {
+    display: inline-block;
+    font-weight: bold;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.config .meta {
+    padding: 5px;
+}
+
+.config .thumbnail {
+    display: inline-block;
+    width: 100%;
+}
+
+.config .descrption {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+    padding: 10px;
+}
+
+.config .editrule {
+    margin-top: 20px;
+    padding: 10px;
+    border: solid 1px gray;
+    border-style: dashed;
+}
+
+.config .buttoncontainer {
+    padding-top: 20px;
+    padding-left: 35%;
+}
+
+.editrule .rulebuttoncontainer {
+    padding-top: 20px;
+    padding-left: 70%;
+}
+.config .invalid {
+    margin:5px;
+    padding:5px;
+    display: block;
+    border: 1px solid red;
+    color: red;
+}
+
+.config .rule-title {
+    display: block;
+    font-size: large;
+    font-weight: bold;
+    padding-top: 10px;
+    margin-top: 20px;
+    width: 100%;
+    border-top:solid 1px gray;
+}
+.config .rule-add {
+    display: block;
+    float: right;
+    margin-top: -25px;
+}
+.config .rules {
+    display: table;
+    width: 100%;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 10px;
+}
+.config .rules .rule-header {
+    display: table-row;
+    width: 100%;
+    padding: 20px;
+}
+.config .rules .rule-row .header-cell {
+    display: table-cell;
+    padding: 5px;
+    text-align: center;
+    font-weight: bold;
+    border-bottom: solid 1px lightgray;
+}
+.config .rules .rule-row{
+    display: table-row;
+}
+.config .rules .rule-cell{
+    display: table-cell;
+    padding: 5px;
+}
+.editrule .slider {
+    width: 50%;
+    margin: 20px;
+    padding-bottom: 20px;
+}
+.editrule .alert {
+    border: solid 1px red;
+    background-color: rgb(251, 221, 221);
+    color: red;
+}
+.editrule .invalid {
+    border: solid 1px red;
+    background-color: rgb(252, 192, 192);
+    color: red;
+    padding: 5px;
+    margin-top: 5px;
+}

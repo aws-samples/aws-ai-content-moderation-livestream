@@ -1,0 +1,153 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get config, cache, check frequency",
+  "States": {
+    "Get config, cache, check frequency": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "##LAMBDA_RE_IMG_CHECK_FREQ##"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Exceeded frequency threshold? Check similarity?"
+    },
+    "Exceeded frequency threshold? Check similarity?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.status_code",
+          "NumericEquals": 400,
+          "Comment": "Exceeded frequency threashold. Ignore the image.",
+          "Next": "Success"
+        },
+        {
+          "Variable": "$.ignore_similar",
+          "BooleanEquals": true,
+          "Comment": "Proceed to similiarity check",
+          "Next": "Check image similarity"
+        }
+      ],
+      "Default": "Rekognition moderation and assess rules"
+    },
+    "Check image similarity": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "##LAMBDA_RE_IMG_CHECK_SIMILARITY##"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Similiar image?"
+    },
+    "Similiar image?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.status_code",
+          "NumericEquals": 400,
+          "Next": "Success",
+          "Comment": "Similar to cached image, ignore."
+        }
+      ],
+      "Default": "Rekognition moderation and assess rules"
+    },
+    "Rekognition moderation and assess rules": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "##LAMBDA_RE_IMG_MOD_EVAL##"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Rule violation detected?"
+    },
+    "Rule violation detected?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.safe",
+              "BooleanEquals": false
+            },
+            {
+              "Variable": "$.auto_stop",
+              "BooleanEquals": false
+            }
+          ],
+          "Comment": "Image violates safety rules.",
+          "Next": "SNS Publish"
+        },
+        {
+          "Variable": "$.auto_stop",
+          "BooleanEquals": true,
+          "Next": "Auto Stop IVS Stream",
+          "Comment": "Auto stop the stream"
+        }
+      ],
+      "Default": "Success"
+    },
+    "SNS Publish": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "##SNS_RE_WARNING_TOPIC##",
+        "Message": {
+          "moderation_result.$": "$.mod_result"
+        }
+      },
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Auto Stop IVS Stream": {
+      "Type": "Task",
+      "End": true,
+      "Parameters": {
+        "ChannelArn.$": "$.channel_arn"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:ivs:stopStream"
+    }
+  }
+}

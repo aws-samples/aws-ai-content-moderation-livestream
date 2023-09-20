@@ -1,0 +1,43 @@
+[
+  {
+    "key": "bedrock",
+    "source_name": "Bedrock",
+    "text-2-image": true,
+    "image-2-image": true,
+    "upscale": false,
+    "masking": true,
+    "styles": [
+      { "text": "analog-film", "id": "analog-film", "external": "/stable-diffusion/bedrock" },
+      { "text": "3d-model", "id": "3d-model", "external": "/stable-diffusion/bedrock" },
+      { "text": "anime", "id": "anime", "external": "/stable-diffusion/bedrock" },
+      { "text": "cinematic", "id": "cinematic", "external": "/stable-diffusion/bedrock" },
+      { "text": "comic-book", "id": "comic-book", "external": "/stable-diffusion/bedrock" },
+      { "text": "digital-art", "id": "digital-art", "external": "/stable-diffusion/bedrock" },
+      { "text": "enhance", "id": "enhance", "external": "/stable-diffusion/bedrock" },
+      { "text": "fantasy-art", "id": "fantasy-art", "external": "/stable-diffusion/bedrock" },
+      { "text": "isometric", "id": "isometric", "external": "/stable-diffusion/bedrock" },
+      { "text": "line-art", "id": "line-art", "external": "/stable-diffusion/bedrock" },
+      { "text": "low-poly", "id": "low-poly", "external": "/stable-diffusion/bedrock" },
+      { "text": "modeling-compound", "id": "modeling-compound", "external": "/stable-diffusion/bedrock" },
+      { "text": "neon-punk", "id": "neon-punk", "external": "/stable-diffusion/bedrock" },
+      { "text": "origami", "id": "origami", "external": "/stable-diffusion/bedrock" },
+      { "text": "photographic", "id": "photographic", "external": "/stable-diffusion/bedrock" },
+      { "text": "pixel-art", "id": "pixel-art", "external": "/stable-diffusion/bedrock" },
+      { "text": "tile-texture", "id": "tile-texture", "external": "/stable-diffusion/bedrock" }
+    ]
+  },
+  {
+    "key": "sagemaker-fine-tuned",
+    "text-2-image": true,
+    "image-2-image": true,
+    "upscale": false,
+    "masking": false,
+    "source_name": "SageMaker fine-tuned",
+    "styles": [
+      { "text": "Lana", "id": "Lana", "disabled": false, "external": "/stable-diffusion/sagemaker" },
+      { "text": "James", "id": "James", "disabled": false, "external": "/stable-diffusion/sagemaker" },
+      { "text": "John", "id": "John", "disabled": false, "external": "/stable-diffusion/sagemaker" },
+      { "text": "Simon", "id": "Simon", "disabled": false, "external": "/stable-diffusion/sagemaker" }
+    ]
+  }
+]

@@ -1,0 +1,28 @@
+.channels {
+    margin: 10px;
+}
+
+.channels .card {
+    display: block;
+    width: 100%;
+}
+
+.channels .card .warning .message {
+    display: inline-block;
+    padding: 10px;
+}
+
+.channels .card .label {
+    display: inline-block;
+    font-weight: bold;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.card .desc {
+    display: block;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    border:solid 1px red;
+}

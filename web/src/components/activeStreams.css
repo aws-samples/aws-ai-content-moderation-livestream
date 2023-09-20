@@ -1,0 +1,50 @@
+.streams {
+    margin: 10px;
+}
+
+.streams .card {
+    display: block;
+    width: 100%;
+}
+
+.streams .card .warning {
+    border: solid 1px rgb(255, 89, 0);
+    background-color: rgb(255, 89, 0);
+    color: white;
+    font-weight: bold;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.streams .card .warning .message {
+    display: inline-block;
+    padding: 10px;
+}
+
+.streams .card .label {
+    display: inline-block;
+    font-weight: bold;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.warningdetail .meta {
+    padding: 5px;
+}
+
+.warningdetail .thumbnail {
+    display: inline-block;
+    width: 100%;
+}
+
+.warningdetail .descrption {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+    padding: 10px;
+}
+
+.warningdetail .button {
+    float: right;
+}
