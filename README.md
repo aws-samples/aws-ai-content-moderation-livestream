@@ -124,3 +124,5 @@ Users can customizing moderation rules, controlling video stream sample frequenc
 ### Monitoring and management dashboard
 The system is a serverless web app, featuring a static React frontend hosted on Amazon S3 with Amazon CloudFront for caching. Authentication is handled by Amazon Cognito. Data is served through Amazon API Gateway and AWS Lambda, with state storage in Amazon DynamoDB.
 ![UI portal digram](static/web-ui-portal-architecture.png)
+
+The monitoring dashboard is a lightweight demo app that provides essential features for moderators. To enhance functionality, you can extend the implementation to support multiple moderators with a management system and reduce latency by implementing a push mechanism using web sockets.
