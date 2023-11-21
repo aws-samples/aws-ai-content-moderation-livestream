@@ -80,6 +80,15 @@ class BackendStack(NestedStack):
         user_pool = _cognito.UserPool(self, "web-user-pool",
             user_pool_name=f"{COGNITO_NAME_PREFIX}-{self.instance_hash}",
             self_sign_up_enabled=False,
+            password_policy=_cognito.PasswordPolicy(
+                min_length=8,
+                require_lowercase=True,
+                require_uppercase=True,
+                require_digits=True,
+                require_symbols=True,
+                temp_password_validity=Duration.days(7)
+            ),
+            advanced_security_mode=_cognito.AdvancedSecurityMode.ENFORCED,
             removal_policy=RemovalPolicy.DESTROY
         )
         self.cognito_user_pool_id = user_pool.user_pool_id
@@ -104,18 +113,21 @@ class BackendStack(NestedStack):
             id='config-table', 
             table_name=f'{DYNAMO_CONFIG_TABLE}-{self.instance_hash}', 
             partition_key=_dynamodb.Attribute(name='channel_id', type=_dynamodb.AttributeType.STRING),
+            point_in_time_recovery=True,
             removal_policy=RemovalPolicy.DESTROY
         ) 
         cache_table = _dynamodb.Table(self, 
             id='cache-table', 
             table_name=f'{DYNAMO_CACHE_TABLE}-{self.instance_hash}', 
             partition_key=_dynamodb.Attribute(name='channel_id', type=_dynamodb.AttributeType.STRING),
+            point_in_time_recovery=True,
             removal_policy=RemovalPolicy.DESTROY
         ) 
         warning_table = _dynamodb.Table(self, 
             id='warning-table', 
             table_name=f'{DYNAMO_WARNING_TABLE}-{self.instance_hash}', 
             partition_key=_dynamodb.Attribute(name='id', type=_dynamodb.AttributeType.STRING),
+            point_in_time_recovery=True,
             removal_policy=RemovalPolicy.DESTROY
         ) 
 
@@ -137,7 +149,7 @@ class BackendStack(NestedStack):
             handler='cm-ls-rules-engine-image-flow-check-frequency.lambda_handler',
             code=_lambda.Code.from_asset(os.path.join("./", "lambda/rules-engine/cm-ls-rules-engine-image-flow-check-frequency")),
             timeout=Duration.seconds(30),
-            role=lambda_re_img_check_freq_role(self,s3_ivs_bucket_name, self.region, self.account_id),
+            role=lambda_re_img_check_freq_role(self, self.region, self.account_id, [f"{DYNAMO_CONFIG_TABLE}-{self.instance_hash}", f"{DYNAMO_CACHE_TABLE}-{self.instance_hash}"]),
             environment={
              'DYNAMO_CONFIG_TABLE': DYNAMO_CONFIG_TABLE + f"-{self.instance_hash}",
              'DYNAMO_CACHE_TABLE': DYNAMO_CACHE_TABLE + f"-{self.instance_hash}",
@@ -149,7 +161,7 @@ class BackendStack(NestedStack):
             function_name=f"cm-ls-rules-engine-image-similarity-check-{self.instance_hash}", 
             #handler='cm-ls-rules-engine-image-similarity-check.lambda_handler',
             code=_lambda.DockerImageCode.from_image_asset(os.path.join("./", "lambda/rules-engine/cm-ls-rules-engine-image-similarity-check")),
-            role=lambda_re_img_check_similarity_role(self,"", self.region, self.account_id),
+            role=lambda_re_img_check_similarity_role(self,self.region, self.account_id, [s3_ivs_bucket_name], [f"{DYNAMO_CACHE_TABLE}-{self.instance_hash}"]),
             timeout=Duration.seconds(30),
             memory_size=1024,
             environment={
@@ -164,7 +176,7 @@ class BackendStack(NestedStack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             handler='cm-ls-rules-engine-image-flow-moderation-and-eval.lambda_handler',
             code=_lambda.Code.from_asset(os.path.join("./", "lambda/rules-engine/cm-ls-rules-engine-image-flow-moderation-and-eval")),
-            role=lambda_re_img_mod_eval_role(self,s3_ivs_bucket_name, self.region, self.account_id),
+            role=lambda_re_img_mod_eval_role(self, self.region, self.account_id, [s3_ivs_bucket_name]),
         )
         # StepFunctions StateMachine
         sm_json = None
@@ -179,7 +191,15 @@ class BackendStack(NestedStack):
 
         cfn_state_machine = _aws_stepfunctions.CfnStateMachine(self, 'stepfunction-image-workflow',
             state_machine_name=f'{STEP_FUNCTION_STATE_MACHINE_NAME_PREFIX}-{self.instance_hash}', 
-            role_arn=stepfunction_execution_role(self, s3_ivs_bucket_name, self.region, self.account_id).role_arn,
+            role_arn=stepfunction_execution_role(self, self.region, self.account_id, 
+                    [s3_ivs_bucket_name], 
+                    ["sns-warning-topic"], 
+                    [
+                        f"cm-ls-rules-engine-image-flow-check-frequency-{self.instance_hash}", 
+                        f"cm-ls-rules-engine-image-similarity-check-{self.instance_hash}", 
+                        f"cm-ls-rules-engine-image-flow-moderation-and-eval-{self.instance_hash}"
+                    ]
+                ).role_arn,
             definition_string=sm_json)
         # Step Function - end
         
@@ -197,7 +217,7 @@ class BackendStack(NestedStack):
         # Lambda: cm-ls-rules-engine-delete-configs
         self.create_api_endpoint(id='re-delete-configs', 
             root=re, path1="rules-engine", path2="config-delete", method="POST", auth=auth, 
-            role=lambda_re_delete_config_role(self, s3_ivs_bucket_name, self.region, self.account_id), 
+            role=lambda_re_delete_config_role(self, self.region, self.account_id, [f"{DYNAMO_CONFIG_TABLE}-{self.instance_hash}"]), 
             lambda_file_name="cm-ls-rules-engine-delete-configs", 
             instance_hash=self.instance_hash, memory_m=128, timeout_s=10, 
             evns={
@@ -207,7 +227,9 @@ class BackendStack(NestedStack):
 
         # POST /v1/rules-engine/config-upsert
         # Lambda: cm-ls-rules-engine-upsert-config
-        self.create_api_endpoint('re-updsert-coonfig', re, "rules-engine", "config-upsert", "POST", auth, lambda_re_upsert_config_role(self, s3_ivs_bucket_name, self.region, self.account_id), "cm-ls-rules-engine-upsert-config", self.instance_hash, 128, 10, 
+        self.create_api_endpoint('re-updsert-coonfig', re, "rules-engine", "config-upsert", "POST", auth, 
+                lambda_re_upsert_config_role(self, self.region, self.account_id, [f"{DYNAMO_CONFIG_TABLE}-{self.instance_hash}", f"{DYNAMO_CACHE_TABLE}-{self.instance_hash}"]), 
+                "cm-ls-rules-engine-upsert-config", self.instance_hash, 128, 10, 
             evns={
              'DYNAMO_CONFIG_TABLE': DYNAMO_CONFIG_TABLE + f"-{self.instance_hash}",
              'DYNAMO_CACHE_TABLE': DYNAMO_CACHE_TABLE + f"-{self.instance_hash}",
@@ -215,7 +237,9 @@ class BackendStack(NestedStack):
             
         # POST /v1/rules-engine/configs
         # Lambda: cm-ls-rules-engine-get-configs
-        self.create_api_endpoint('re-get-configs', re, "rules-engine", "configs", "POST", auth, lambda_re_get_configs_role(self, s3_ivs_bucket_name, self.region, self.account_id), "cm-ls-rules-engine-get-configs", self.instance_hash, 128, 10, 
+        self.create_api_endpoint('re-get-configs', re, "rules-engine", "configs", "POST", auth, 
+                lambda_re_get_configs_role(self, self.region, self.account_id, [f"{DYNAMO_CONFIG_TABLE}-{self.instance_hash}"]), 
+                "cm-ls-rules-engine-get-configs", self.instance_hash, 128, 10, 
             evns={
              'DYNAMO_CONFIG_TABLE': DYNAMO_CONFIG_TABLE + f"-{self.instance_hash}",
             })
@@ -224,27 +248,30 @@ class BackendStack(NestedStack):
         # POST /v1/monitoring/streams
         # Lambda: cm-ls-monitor-service-get-streams 
         self.create_api_endpoint('mo-get-streams', mo, "monitoring", "streams", "POST", auth, 
-                lambda_mo_get_streams_role(self, s3_ivs_bucket_name, self.region, self.account_id), 
+                lambda_mo_get_streams_role(self, self.region, self.account_id, [s3_ivs_bucket_name], [f"{DYNAMO_WARNING_TABLE}-{self.instance_hash}", f"{DYNAMO_CACHE_TABLE}-{self.instance_hash}"]), 
                 "cm-ls-monitor-service-get-streams", self.instance_hash, 128, 30, 
                 evns={
-                'DYNAMO_WARNING_TABLE': DYNAMO_WARNING_TABLE + f"-{self.instance_hash}",                
                 'IVS_THUMBNAIL_PREFIX': IVS_THUMBNAIL_PREFIX,
                 'ACK_SLA_S': ACK_SLA_S,
                 'S3_PRE_SIGNED_URL_EXPIRY_S': S3_PRE_SIGNED_URL_EXPIRY_S,
                 'DYNAMO_WARNING_TABLE': DYNAMO_WARNING_TABLE+ f"-{self.instance_hash}",
-                'DYNAMO_CACHE_TABLE': DYNAMO_CACHE_TABLE + f"-{self.instance_hash}",
+                'DYNAMO_CACHE_TABLE': DYNAMO_CACHE_TABLE+ f"-{self.instance_hash}",
                 })      
             
         # POST /v1/monitoring/acknowledge
         # Lambda: cm-ls-monitor-service-ack-warning
-        self.create_api_endpoint('mo-ack-warning', mo, "monitoring", "acknowledge", "POST", auth, lambda_mo_ack_warning_role(self, s3_ivs_bucket_name, self.region, self.account_id), "cm-ls-monitor-service-ack-warning", self.instance_hash, 128, 3, 
+        self.create_api_endpoint('mo-ack-warning', mo, "monitoring", "acknowledge", "POST", auth, 
+                lambda_mo_ack_warning_role(self, self.region, self.account_id, [f"{DYNAMO_WARNING_TABLE}-{self.instance_hash}"]), 
+                "cm-ls-monitor-service-ack-warning", self.instance_hash, 128, 3, 
             evns={
              'DYNAMO_WARNING_TABLE': DYNAMO_WARNING_TABLE + f"-{self.instance_hash}",
             })
 
         # POST /v1/monitoring/channels
         # Lamabd: cm-ls-monitor-service-get-channels 
-        self.create_api_endpoint('mo-get-channels', mo, "monitoring", "channels", "POST", auth, lambda_mo_get_channels_role(self, s3_ivs_bucket_name, self.region, self.account_id), "cm-ls-monitor-service-get-channels", self.instance_hash, 128, 10, 
+        self.create_api_endpoint('mo-get-channels', mo, "monitoring", "channels", "POST", auth, 
+                lambda_mo_get_channels_role(self, self.region, self.account_id, [s3_ivs_bucket_name], [f"{DYNAMO_CONFIG_TABLE}-{self.instance_hash}"]), 
+                "cm-ls-monitor-service-get-channels", self.instance_hash, 128, 10, 
             evns={
              'DYNAMO_CONFIG_TABLE': DYNAMO_CONFIG_TABLE + f"-{self.instance_hash}", 
              'IVS_THUMBNAIL_S3_BUCKET': s3_ivs_bucket_name,
@@ -262,7 +289,7 @@ class BackendStack(NestedStack):
             handler='cm-ls-monitor-service-listener.lambda_handler',
             code=_lambda.Code.from_asset(os.path.join("./", "lambda/monitoring/cm-ls-monitor-service-listener")),
             timeout=Duration.seconds(30),
-            role=lambda_mo_sns_listener_role(self, s3_ivs_bucket_name, self.region, self.account_id),
+            role=lambda_mo_sns_listener_role(self, self.region, self.account_id, [f"{DYNAMO_WARNING_TABLE}-{self.instance_hash}"]),
             environment={
              'DYNAMO_WARNING_TABLE': DYNAMO_WARNING_TABLE + f"-{self.instance_hash}",
             }
@@ -279,7 +306,7 @@ class BackendStack(NestedStack):
             handler='cm-ls-rules-engine-image-s3-listener.lambda_handler',
             code=_lambda.Code.from_asset(os.path.join("./", "lambda/rules-engine/cm-ls-rules-engine-image-s3-listener")),
             timeout=Duration.seconds(10),
-            role=lambda_re_s3_listener_role(self, s3_ivs_bucket_name, self.region, self.account_id),
+            role=lambda_re_s3_listener_role(self, self.region, self.account_id, [cfn_state_machine.attr_arn]),
             environment={
              'IMAGE_PROCESSOR_WORKFLOW_ARN': cfn_state_machine.attr_arn,
             }
@@ -315,7 +342,7 @@ class BackendStack(NestedStack):
                 path2, 
                 default_cors_preflight_options=_apigw.CorsOptions(
                 allow_methods=['POST', 'OPTIONS'],
-                allow_origins=_apigw.Cors.ALL_ORIGINS)
+                allow_origins=_apigw.Cors.ALL_ORIGINS),
         )
         method = resource.add_method(
             method, 

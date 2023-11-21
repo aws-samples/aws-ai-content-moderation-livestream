@@ -16,8 +16,8 @@ The screen recording below displays the UI for managing a global configuration:
 
 ## Prerequisites
 
-- If you don't have the AWS account administrator access, ensure your [IAM](https://aws.amazon.com/iam/) role/user has permissions to create and manage the necessary resources and components for this solution.
-- In the same AWS account, ensure that you have created at least one IVS channel with recording enabled. We will require the name of the IVS recording S3 bucket as an input for the [CDK](https://aws.amazon.com/cdk/) application deployment. Please refer [this document](https://docs.aws.amazon.com/ivs/latest/LowLatencyUserGuide/getting-started-create-channel.html) for detailed instructions on how to create an IVS channel with recording enabled.
+- If you don't have the AWS account administrator access, ensure your IAM role/user has permissions to create and manage the necessary resources and components for this solution.
+- In the same AWS account, ensure that you have created at least one IVS channel with recording enabled. We will require the name of the IVS recording S3 bucket as an input for the CDK application deployment. Please refer [this document](https://docs.aws.amazon.com/ivs/latest/LowLatencyUserGuide/getting-started-create-channel.html) for detailed instructions on how to create an IVS channel with recording enabled.
 
 ## Supported AWS regions
 The Live Stream moderation solution requires AWS services, including Amazon IVS and Amazon Rekognition, which are available in certain regions. Please choose one of the below AWS regions to deploy the CDK package.
@@ -65,32 +65,40 @@ aws configure
 If your CloudShell instance has older dependency libraries like npm or pip, it may cause deployment errors. To resolve this, click 'Actions' and choose 'Delete AWS CloudShell Home Directory' to start a fresh instance.
 
 ### Deploy the CDK package using CloudShell
-1. Clone the source code from GitHub repo 
+1. Clone the source code from GitHub repo: replace the place holder with the GitHub access token. The token is only needed for internal testing stage. It will be removed once the GitHub repo is public.
 ```
-git clone https://github.com/aws-samples/aws-ai-content-moderation-livestream
-cd aws-ai-content-moderation-livestream
+git clone https://[GITHUB_ACCESS_TOKEN]@github.com/lanazhang/aws-ai-livestream-moderation-poc-in-a-box.git
+```
+```
+cd aws-ai-livestream-moderation-poc-in-a-box
+```
+
+For AWS GitLab users, you can obtain the repository as a zip file by visiting https://gitlab.aws.dev/lanaz/aws-ai-cm-livestream and upload it to your CloudShell instance. Afterward, unzip the file and execute the provided command from within the directory. Proceed by following the remaining instructions.
+```
+cd aws-ai-cm-livestream
 ```
 
 2. Set up environment varaibles 
 - Update the values with your target AWS account ID and the region where you intend to deploy the livestream moderation demo application.
 ```
-export CDK_DEFAULT_ACCOUNT=YOUR_ACCOUNT_ID
-export CDK_DEFAULT_REGION=YOUR_TARGET_REGION (e.x, us-east-1)
+export CDK_DEFAULT_ACCOUNT=[YOUR_ACCOUNT_ID]
+export CDK_DEFAULT_REGION=[YOUR_TARGET_REGION]
 ```
 Set environment variables as input parameters for the CDK deployment package:
 
 CDK_INPUT_USER_EMAILS: Email address(es) for login to the Livestream moderation portal. They will receive temporary passwords.
 ```
-export CDK_INPUT_USER_EMAILS=EMAILS_SPLIT_BY_COMMA
+export CDK_INPUT_USER_EMAILS=[EMAILS_SPLIT_BY_COMMA]
 ```
 CDK_INPUT_IVS_RECORDING_S3_BUCKET: The S3 bucket configured in IVS for storing thumbnails. Please refer to the Prerequisites section for instructions. 
 
 > :warning: **Please ensure that:**
 - The S3 bucket is located in the same AWS account and region specified by the environment variables CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGION. 
 - The S3 bucket does not have notifications configured for the 'ivs/v1' prefix, as this may disrupt CDK functionality.
-- The IAM role/user is granted permissions to create an S3 Lambda trigger for the specified bucket.
+- The IAM role/user is granted permissions to create an S3 Lambda trigger and has read access to the files in the specified bucket.
+- Please always encrypt objects in the S3 bucket using a KMS key. [Refer to document](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html).
 ```
-export CDK_INPUT_IVS_RECORDING_S3_BUCKET=IVS_RECORDING_S3_BUCKET_NAME
+export CDK_INPUT_IVS_RECORDING_S3_BUCKET=[IVS_RECORDING_S3_BUCKET_NAME]
 ```
 
 3. Run **deploy-cloudshell.sh** in CloudShell to deploy the application to your AWS account with the parameters defined in step 2.
@@ -124,5 +132,3 @@ Users can customizing moderation rules, controlling video stream sample frequenc
 ### Monitoring and management dashboard
 The system is a serverless web app, featuring a static React frontend hosted on Amazon S3 with Amazon CloudFront for caching. Authentication is handled by Amazon Cognito. Data is served through Amazon API Gateway and AWS Lambda, with state storage in Amazon DynamoDB.
 ![UI portal digram](static/web-ui-portal-architecture.png)
-
-The monitoring dashboard is a lightweight demo app that provides essential features for moderators. To enhance functionality, you can extend the implementation to support multiple moderators with a management system and reduce latency by implementing a push mechanism using web sockets.

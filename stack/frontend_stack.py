@@ -90,7 +90,7 @@ class FrontendStack(NestedStack):
 
         # Custom Resource Lambda: cm-ls-provision-custom-resource
         # Replace APIGateway URL and Cognitio keys in S3 static website 
-        provision_web_role = create_provision_web_role(self,web_bucket.bucket_name, self.region, self.account_id)
+        provision_web_role = create_provision_web_role(self, self.region, self.account_id, [web_bucket.bucket_name], [f'{DYNAMO_CONFIG_TABLE}-{self.instance_hash}'])
         lambda_provision = _lambda.Function(self, 
             id='provision-update-web-urls', 
             function_name=f"cm-ls-provision-custom-resource-{self.instance_hash}", 

@@ -6,26 +6,21 @@ from constructs import Construct
 from iam_role import policy
 
 
-def create_role(self, bucket_name, region, account_id):
+def create_role(self, region, account_id, stepfunctions):
     # IAM role
     new_role = _iam.Role(self, "lambda-re-s3-listener-role",
-        assumed_by=_iam.ServicePrincipal("lambda.amazonaws.com"),
-    )
-    new_role.add_to_policy(
-        # DynamoDB access
-        policy.create_policy_dynamodb(self, bucket_name, region, account_id)
-    )
-    new_role.add_to_policy(
-        # S3 access
-        policy.create_policy_s3(self, bucket_name, region, account_id)
+        assumed_by=_iam.CompositePrincipal(
+                _iam.ServicePrincipal("lambda.amazonaws.com"),
+                _iam.ServicePrincipal("states.amazonaws.com")
+            ),
     )
     new_role.add_to_policy(
         # CloudWatch log
-        policy.create_policy_lambda_log(self, bucket_name, region, account_id)
+        policy.create_policy_lambda_log(self, region, account_id)
     )
     new_role.add_to_policy(
         # Invoke stepfunctions
-        policy.create_policy_stepfunctions(self, bucket_name, region, account_id)
+        policy.create_policy_stepfunctions(self, region, account_id, stepfunctions)
     )
     
     return new_role
