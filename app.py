@@ -22,9 +22,9 @@ class RootStack(Stack):
     
         self.instance_hash = str(uuid.uuid4())[0:5]
 
-        input_ivs_bucket_name = _cfnParameter(self, "inputIvsBucketName", type="String", default="wwso-cm-livestream-demo-us-west-2",
+        input_ivs_bucket_name = _cfnParameter(self, "inputIvsBucketName", type="String",
                                         description="The S3 bucket holds IVS recording thumbnails. This sets up an empty bucket for IVS recording if you don't provide one.")
-        input_user_emails = _cfnParameter(self, "inputUserEmails", type="String", default="lanaz@amazon.com,zhangblue@gmail.com",
+        input_user_emails = _cfnParameter(self, "inputUserEmails", type="String",
                                 description="Use your email to log in to the web portal. Split by comma if there are multiple emails.")
         
         if input_ivs_bucket_name is not None:
